@@ -21,20 +21,21 @@ const List: React.FC<ListProps> = ({ people, onSelected, delay = 300 }) => {
     setIsOpen(true);
     onSelected(null);
 
-    // Відрізаємо пробіли і робимо маленькими літерами
+    window.clearTimeout(timerid.current);
+
     const newNormalized = inputValue.trim().toLowerCase();
 
-    // Якщо текст після обрізання пробілів ТАКИЙ САМИЙ, як був — виходимо!
-    // Це вирішує проблему зайвого фільтрування і натискання одних лише пробілів
     if (newNormalized === normalizedQuery) {
       return;
     }
 
-    // Якщо текст дійсно змінився — запускаємо таймер
-    window.clearTimeout(timerid.current);
-    timerid.current = window.setTimeout(() => {
-      setNormalizedQuery(newNormalized);
-    }, delay);
+    if (newNormalized) {
+      timerid.current = window.setTimeout(() => {
+        setNormalizedQuery(newNormalized);
+      }, delay);
+    } else {
+      setNormalizedQuery('');
+    }
   };
 
   const filteredPeople = useMemo(() => {
