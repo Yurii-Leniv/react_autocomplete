@@ -1,5 +1,5 @@
 import React, { useMemo, useRef } from 'react';
-import { Person } from "../types/Person";
+import { Person } from '../types/Person';
 // import { peopleFromServer } from "../data/people"; // якщо не використовуєш тут, можна видалити
 
 type ListProps = {
@@ -9,7 +9,6 @@ type ListProps = {
 };
 
 const List: React.FC<ListProps> = ({ people, onSelected, delay = 300 }) => {
-
   const [isOpen, setIsOpen] = React.useState(false);
   const [query, setQuery] = React.useState('');
   const [normalizedQuery, setNormalizedQuery] = React.useState('');
@@ -17,16 +16,36 @@ const List: React.FC<ListProps> = ({ people, onSelected, delay = 300 }) => {
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = event.target.value;
-    setQuery(inputValue);
-    setIsOpen(true);
 
+    setQuery(inputValue); // В інпуті показуємо все як є (навіть пробіли)
+    setIsOpen(true);
     onSelected(null);
 
+    // Відрізаємо пробіли і робимо маленькими літерами
+    const newNormalized = inputValue.trim().toLowerCase();
+
+    // Якщо текст після обрізання пробілів ТАКИЙ САМИЙ, як був — виходимо!
+    // Це вирішує проблему зайвого фільтрування і натискання одних лише пробілів
+    if (newNormalized === normalizedQuery) {
+      return;
+    }
+
+    // Якщо текст дійсно змінився — запускаємо таймер
     window.clearTimeout(timerid.current);
     timerid.current = window.setTimeout(() => {
-      setNormalizedQuery(inputValue.toLowerCase());
+      setNormalizedQuery(newNormalized);
     }, delay);
   };
+
+  const filteredPeople = useMemo(() => {
+    if (!normalizedQuery) {
+      return people;
+    }
+
+    return people.filter(person =>
+      person.name.toLowerCase().includes(normalizedQuery),
+    );
+  }, [people, normalizedQuery]);
 
   const handleSelectPerson = (person: Person) => {
     setQuery(person.name);
@@ -34,51 +53,53 @@ const List: React.FC<ListProps> = ({ people, onSelected, delay = 300 }) => {
     onSelected(person);
   };
 
-  const filteredPeople = useMemo(() =>
-    people.filter((person) => person.name.trim().toLowerCase().includes(normalizedQuery))
-  , [people, normalizedQuery]);
-
   return (
     <div className="container">
-        <div className={`dropdown ${isOpen ? 'is-active' : ''}`}>
-          <div className="dropdown-trigger">
-            <input
-              type="text"
-              placeholder="Enter a part of the name"
-              className="input"
-              data-cy="search-input"
-              value={query}
-              onChange={handleInputChange}
-              onFocus={() => setIsOpen(true)}
-            />
-          </div>
-
-          <div className="dropdown-menu" role="menu" data-cy="suggestions-list">
-            <div className="dropdown-content">
-              {filteredPeople.map((person) => (
-                <div
-                  key={person.slug}
-                  className="dropdown-item"
-                  data-cy="suggestion-item"
-                  onClick={() => handleSelectPerson(person)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <p className="has-text-link">{person.name}</p>
-                </div>
-              ))}
-            </div>
-          </div>
+      <div className={`dropdown ${isOpen ? 'is-active' : ''}`}>
+        <div className="dropdown-trigger">
+          <input
+            type="text"
+            placeholder="Enter a part of the name"
+            className="input"
+            data-cy="search-input"
+            value={query}
+            onChange={handleInputChange}
+            onFocus={() => setIsOpen(true)}
+          />
         </div>
 
-        {isOpen && query !== '' && filteredPeople.length === 0 && (
-          <div
-            className="notification is-danger is-light mt-3 is-align-self-flex-start"
-            role="alert"
-            data-cy="no-suggestions-message"
-          >
-            <p className="has-text-danger">No matching suggestions</p>
+        <div className="dropdown-menu" role="menu" data-cy="suggestions-list">
+          <div className="dropdown-content">
+            {filteredPeople.map(person => (
+              <div
+                key={person.slug}
+                className="dropdown-item"
+                data-cy="suggestion-item"
+                onClick={() => handleSelectPerson(person)}
+                style={{ cursor: 'pointer' }}
+              >
+                <p className="has-text-link">{person.name}</p>
+              </div>
+            ))}
           </div>
-        )}
+        </div>
+      </div>
+
+      {isOpen && normalizedQuery !== '' && filteredPeople.length === 0 && (
+        <div
+          className={`
+            notification
+            is-danger
+            is-light
+            mt-3
+            is-align-self-flex-start
+          `}
+          role="alert"
+          data-cy="no-suggestions-message"
+        >
+          <p className="has-text-danger">No matching suggestions</p>
+        </div>
+      )}
     </div>
   );
 };
